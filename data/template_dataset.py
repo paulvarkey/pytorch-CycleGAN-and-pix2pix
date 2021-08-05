@@ -11,6 +11,12 @@ You need to implement the following functions:
     -- <__getitem__>: Return a data point and its metadata information.
     -- <__len__>: Return the number of images.
 """
+
+import pathlib
+
+import pandas as pd
+import torch
+
 from data.base_dataset import BaseDataset, get_transform
 # from data.image_folder import make_dataset
 # from PIL import Image
@@ -46,8 +52,12 @@ class TemplateDataset(BaseDataset):
         """
         # save the option and dataset root
         BaseDataset.__init__(self, opt)
+
         # get the image paths of your dataset;
-        self.image_paths = []  # You can call sorted(make_dataset(self.root, opt.max_dataset_size)) to get all the image paths under the directory self.root
+        self.image_paths = []
+        for p in pathlib.Path(f"{opt.dataroot}/{opt.phase}").iterdir():
+            self.image_paths.append(str(p.resolve()))
+
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
         self.transform = get_transform(opt)
 
@@ -62,13 +72,23 @@ class TemplateDataset(BaseDataset):
 
         Step 1: get a random image path: e.g., path = self.image_paths[index]
         Step 2: load your data from the disk: e.g., image = Image.open(path).convert('RGB').
-        Step 3: convert your data to a PyTorch tensor. You can use helpder functions such as self.transform. e.g., data = self.transform(image)
+        Step 3: convert your data to a PyTorch tensor. You can use helper functions such as self.transform. e.g., data = self.transform(image)
         Step 4: return a data point as a dictionary.
         """
         path = 'temp'    # needs to be a string
         data_A = None    # needs to be a tensor
         data_B = None    # needs to be a tensor
-        return {'data_A': data_A, 'data_B': data_B, 'path': path}
+
+        path = self.image_paths[index]
+        df_A = pd.read_csv(f"{path}/serving_data.csv")
+        df_B = pd.read_csv(f"{path}/anp.csv")
+        tensor_A = torch.tensor(df_A.rsrp_dbm.values.reshape((93, 69)))
+        tensor_B = torch.tensor(df_B.rsrp.values.reshape((93, 69)))
+        data_A = torch.ones(128, 128) * -200
+        data_B = torch.ones(128, 128) * -200
+        data_A[0:93, 0:69] = tensor_A
+        data_B[0:93, 0:69] = tensor_B
+        return {'A': data_A, 'B': data_B, 'A_paths': path, 'B_paths': path}
 
     def __len__(self):
         """Return the total number of images."""
