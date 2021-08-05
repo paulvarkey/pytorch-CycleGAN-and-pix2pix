@@ -18,6 +18,7 @@ import pandas as pd
 import torch
 
 from data.base_dataset import BaseDataset, get_transform
+import torchvision.transforms as transforms
 # from data.image_folder import make_dataset
 # from PIL import Image
 
@@ -36,7 +37,7 @@ class TemplateDataset(BaseDataset):
             the modified parser.
         """
         parser.add_argument('--new_dataset_option', type=float, default=1.0, help='new dataset option')
-        parser.set_defaults(max_dataset_size=10, new_dataset_option=2.0)  # specify dataset-specific default values
+        # parser.set_defaults(max_dataset_size=10, new_dataset_option=2.0)  # specify dataset-specific default values
         return parser
 
     def __init__(self, opt):
@@ -82,13 +83,28 @@ class TemplateDataset(BaseDataset):
         path = self.image_paths[index]
         df_A = pd.read_csv(f"{path}/serving_data.csv")
         df_B = pd.read_csv(f"{path}/anp.csv")
-        tensor_A = torch.tensor(df_A.rsrp_dbm.values.reshape((93, 69)))
-        tensor_B = torch.tensor(df_B.rsrp.values.reshape((93, 69)))
-        data_A = torch.ones(128, 128) * -200
-        data_B = torch.ones(128, 128) * -200
-        data_A[0:93, 0:69] = tensor_A
-        data_B[0:93, 0:69] = tensor_B
-        return {'A': data_A, 'B': data_B, 'A_paths': path, 'B_paths': path}
+        tensor_A = torch.tensor(df_A.rsrp_dbm.values.reshape((93, 69))).unsqueeze(0)
+        tensor_B = torch.tensor(df_B.rsrp.values.reshape((93, 69))).unsqueeze(0)
+        transform_A = transforms.Compose([transforms.Normalize(mean=(-109.30273115180773,), std=(6.08395770056712,))])
+        transform_B = transforms.Compose([transforms.Normalize(mean=(-112.02556315111886,), std=(8.54219017971843,))])
+        tensor_A = transform_A(tensor_A).unsqueeze(0)
+        tensor_B = transform_B(tensor_B).unsqueeze(0)
+
+        # A_transform = get_transform(self.opt, method=Image.NEAREST, convert=False)
+        # B_transform = get_transform(self.opt, method=Image.NEAREST, convert=False)
+        # A_data = torch.tensor(A_transform(tensor_A))
+        # B_data = torch.tensor(B_transform(tensor_B))
+
+        # A_data = torch.ones(96, 72) * -200
+        # B_data = torch.ones(96, 72) * -200
+        # A_data[0:93, 0:69] = tensor_A
+        # B_data[0:93, 0:69] = tensor_B
+
+        transform = torch.nn.Upsample(size=(96, 72), mode='nearest')
+        A_data = transform(tensor_A).squeeze(0)
+        B_data = transform(tensor_B).squeeze(0)
+
+        return {'A': A_data.float(), 'B': B_data.float(), 'A_paths': path, 'B_paths': path}
 
     def __len__(self):
         """Return the total number of images."""
