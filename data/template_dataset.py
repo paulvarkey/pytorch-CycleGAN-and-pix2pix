@@ -11,15 +11,7 @@ You need to implement the following functions:
     -- <__getitem__>: Return a data point and its metadata information.
     -- <__len__>: Return the number of images.
 """
-
-import pathlib
-
-import numpy as np
-import pandas as pd
-import torch
-
 from data.base_dataset import BaseDataset, get_transform
-import torchvision.transforms as transforms
 # from data.image_folder import make_dataset
 # from PIL import Image
 
@@ -38,7 +30,7 @@ class TemplateDataset(BaseDataset):
             the modified parser.
         """
         parser.add_argument('--new_dataset_option', type=float, default=1.0, help='new dataset option')
-        # parser.set_defaults(max_dataset_size=10, new_dataset_option=2.0)  # specify dataset-specific default values
+        parser.set_defaults(max_dataset_size=10, new_dataset_option=2.0)  # specify dataset-specific default values
         return parser
 
     def __init__(self, opt):
@@ -54,12 +46,8 @@ class TemplateDataset(BaseDataset):
         """
         # save the option and dataset root
         BaseDataset.__init__(self, opt)
-
         # get the image paths of your dataset;
-        self.image_paths = []
-        for p in pathlib.Path(f"{opt.dataroot}/{opt.phase}").iterdir():
-            self.image_paths.append(str(p.resolve()))
-
+        self.image_paths = []  # You can call sorted(make_dataset(self.root, opt.max_dataset_size)) to get all the image paths under the directory self.root
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
         self.transform = get_transform(opt)
 
@@ -74,40 +62,13 @@ class TemplateDataset(BaseDataset):
 
         Step 1: get a random image path: e.g., path = self.image_paths[index]
         Step 2: load your data from the disk: e.g., image = Image.open(path).convert('RGB').
-        Step 3: convert your data to a PyTorch tensor. You can use helper functions such as self.transform. e.g., data = self.transform(image)
+        Step 3: convert your data to a PyTorch tensor. You can use helpder functions such as self.transform. e.g., data = self.transform(image)
         Step 4: return a data point as a dictionary.
         """
         path = 'temp'    # needs to be a string
         data_A = None    # needs to be a tensor
         data_B = None    # needs to be a tensor
-
-        path = self.image_paths[index]
-        df_A = pd.read_csv(f"{path}/serving_data.csv")
-        df_B = pd.read_csv(f"{path}/anp.csv")
-        tensor_A = torch.tensor(df_A.rsrp_dbm.values.reshape((93, 69)).astype(np.float32))
-        tensor_B = torch.tensor(df_B.rsrp.values.reshape((93, 69)).astype(np.float32))
-        tensor_A = 2 * ((tensor_A - (-155.1303253173828)) / (-84.71561431884766 - -155.1303253173828)) - 1
-        tensor_B = 2 * ((tensor_B - (-138.099057563804)) / (-85.1906021061697 - -138.099057563804)) - 1
-        # transform_A = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=(-109.30273115180773,), std=(6.08395770056712,))])
-        # transform_B = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=(-112.02556315111886,), std=(8.54219017971843,))])
-        # A_data = transform_A(tensor_A).unsqueeze(0)
-        # B_data = transform_B(tensor_B).unsqueeze(0)
-
-        # A_transform = get_transform(self.opt, method=Image.NEAREST, convert=False)
-        # B_transform = get_transform(self.opt, method=Image.NEAREST, convert=False)
-        # A_data = torch.tensor(A_transform(tensor_A))
-        # B_data = torch.tensor(B_transform(tensor_B))
-
-        # A_data = torch.ones(96, 72) * -200
-        # B_data = torch.ones(96, 72) * -200
-        # A_data[0:93, 0:69] = tensor_A
-        # B_data[0:93, 0:69] = tensor_B
-
-        transform = torch.nn.Upsample(size=(96, 72), mode='nearest')
-        A_data = transform(A_data).squeeze(0)
-        B_data = transform(B_data).squeeze(0)
-
-        return {'A': A_data, 'B': B_data, 'A_paths': path, 'B_paths': path}
+        return {'data_A': data_A, 'data_B': data_B, 'path': path}
 
     def __len__(self):
         """Return the total number of images."""

@@ -3,8 +3,10 @@ import os
 import sys
 import ntpath
 import time
+import torch
 from . import util, html
 from subprocess import Popen, PIPE
+from PIL import Image
 import matplotlib.pyplot as plt
 
 
@@ -96,52 +98,28 @@ class Visualizer():
         print('Command: %s' % cmd)
         Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 
-    def display_omar_results(self, visuals, epoch, save_result):
-        fig, ax = plt.subplots(3, 1)
+    def display_omar_results(self, visuals, epoch, data):
+        fig, ax = plt.subplots(4, 3, figsize=(40, 24))
         fig.suptitle(f"Epoch: {epoch}")
         for i, (label, image) in enumerate(visuals.items()):
-            sample = image[0].squeeze(0)
-            nx, ny = sample.shape
+            for j, sample in enumerate(image):
+                # sample = sample.squeeze(0).cpu().detach().numpy()
+                # im = Image.fromarray(sample.transpose())
+                # im = im.resize(data.reshape_size, Image.NEAREST)
+                # c = torch.tensor(np.asarray(im)).view(-1)
+                sample = sample.unsqueeze(0).cpu().detach().numpy()
+                transform = torch.nn.Upsample(size=data.reshape_size, mode='nearest')
+                c = transform(torch.tensor(sample)).view(-1)
+                if label.endswith("A"):
+                    c = ((c + 1) / 2 * (data.a_max - data.a_min)) + data.a_min
+                elif label.endswith("B"):
+                    c = ((c + 1) / 2 * (data.b_max - data.b_min)) + data.b_min
 
-            x = [list(range(0,nx)) for i in range(ny)]
-            x = [item for sublist in x for item in sublist]
-            y = [[i]*nx for i in range(0,ny)]
-            y = [item for sublist in y for item in sublist]
-            c = sample.cpu().detach().view(-1)
+                ax[j, i].scatter(x=data.lons, y=data.lats, c=c)
+                ax[j, i].set_title(label)
 
-            if label == "real_A":
-                c = ((c + 1) / 2 * (-84.71561431884766 - -155.1303253173828)) + -155.1303253173828
-            else:
-                c = ((c + 1) / 2 * (-85.1906021061697 - -138.099057563804)) + -138.099057563804
-
-            ax[i].scatter(x=y, y=x, c=c)
-            ax[i].set_title(label)
-
-        plt.savefig(f"sample_{epoch}.png")
-
-        # fig, ax = plt.subplots(8, 3)
-        # fig.suptitle(f"Epoch: {epoch}")
-        # for i, (label, image) in enumerate(visuals.items()):
-        #     for j, sample in enumerate(image):
-        #         sample = sample.squeeze(0)
-        #         nx, ny = sample.shape
-
-        #         x = [list(range(0,nx)) for i in range(ny)]
-        #         x = [item for sublist in x for item in sublist]
-        #         y = [[i]*nx for i in range(0,ny)]
-        #         y = [item for sublist in y for item in sublist]
-
-        #         # x = np.linspace(0, 0.018888889, num=nx*ny)
-        #         # y = np.linspace(0, 0.025555556, num=nx*ny)
-        #         # x = np.arange(0, nx)
-        #         # y = np.arange(0, ny)
-        #         c = sample.cpu().detach().view(-1)
-        #         c = ((c + 1) / 2 * (-85.1906021061697 - -138.099057563804)) + -138.099057563804
-        #         ax[j, i].scatter(x=x, y=y, c=c)
-        #         ax[j, i].set_title(f"{label} / {j}")
-
-        # plt.savefig(f"sample_{epoch}.png")
-
+        plt.savefig(f"epoch_{epoch}.png")
+        plt.close(fig)
 
     def display_current_results(self, visuals, epoch, save_result):
         """Display current results on visdom; save current results to an HTML file.
