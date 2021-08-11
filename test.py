@@ -30,7 +30,7 @@ import os
 from options.test_options import TestOptions
 from data import create_dataset
 from models import create_model
-from util.visualizer import save_images
+from util.visualizer import save_images, save_maveric_results
 from util import html
 
 
@@ -65,5 +65,8 @@ if __name__ == '__main__':
         img_path = model.get_image_paths()     # get image paths
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
-        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
+        if opt.dataset_mode == 'maveric_csv':
+            save_maveric_results(visuals, img_path, dataset.dataset, f"{opt.name}_{opt.phase}_{i}")
+        else:
+            save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
     webpage.save()  # save the HTML

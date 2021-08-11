@@ -1,4 +1,3 @@
-import numpy as np
 import os
 import sys
 import ntpath
@@ -6,8 +5,11 @@ import time
 import torch
 from . import util, html
 from subprocess import Popen, PIPE
-from PIL import Image
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+# from PIL import Image
 
 
 if sys.version_info[0] == 2:
@@ -44,6 +46,38 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
         txts.append(label)
         links.append(image_name)
     webpage.add_images(ims, txts, links, width=width)
+
+
+def save_maveric_results(visuals, image_path, dataset, title):
+    num_labels = len(visuals)
+    num_samples = len(list(visuals.values())[0])
+    fig, ax = plt.subplots(num_samples, num_labels, figsize=(10 * num_labels, 8 * num_samples))
+    fig.suptitle(title)
+
+    df = pd.read_csv(image_path[0])
+    lons = df.longitude.values
+    lats = df.latitude.values
+
+    for i, (label, image) in enumerate(visuals.items()):
+        for j, sample in enumerate(image):
+            # sample = sample.squeeze(0).cpu().detach().numpy()
+            # im = Image.fromarray(sample)
+            # im = im.resize(data.reshape_size, Image.NEAREST)
+            # c = torch.tensor(np.asarray(im)).view(-1)
+            sample = sample.unsqueeze(0).cpu().detach()
+            c = torch.nn.functional.interpolate(sample, size=dataset.reshape_size, mode='nearest').view(-1)
+            if label.endswith("A"):
+                c = ((c + 1) / 2 * (dataset.a_max - dataset.a_min)) + dataset.a_min
+            elif label.endswith("B"):
+                c = ((c + 1) / 2 * (dataset.b_max - dataset.b_min)) + dataset.b_min
+
+            idx = num_labels * j + i
+            pcm = ax.flat[idx].scatter(x=lons, y=lats, c=c.numpy())
+            ax.flat[idx].set_title(label)
+
+    fig.colorbar(pcm, ax=ax, location="right")
+    plt.savefig(f"{title}.jpg")
+    plt.close(fig)
 
 
 class Visualizer():
@@ -97,29 +131,6 @@ class Visualizer():
         print('\n\nCould not connect to Visdom server. \n Trying to start a server....')
         print('Command: %s' % cmd)
         Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-
-    def display_omar_results(self, visuals, epoch, data):
-        fig, ax = plt.subplots(4, 3, figsize=(40, 24))
-        fig.suptitle(f"Epoch: {epoch}")
-        for i, (label, image) in enumerate(visuals.items()):
-            for j, sample in enumerate(image):
-                # sample = sample.squeeze(0).cpu().detach().numpy()
-                # im = Image.fromarray(sample.transpose())
-                # im = im.resize(data.reshape_size, Image.NEAREST)
-                # c = torch.tensor(np.asarray(im)).view(-1)
-                sample = sample.unsqueeze(0).cpu().detach().numpy()
-                transform = torch.nn.Upsample(size=data.reshape_size, mode='nearest')
-                c = transform(torch.tensor(sample)).view(-1)
-                if label.endswith("A"):
-                    c = ((c + 1) / 2 * (data.a_max - data.a_min)) + data.a_min
-                elif label.endswith("B"):
-                    c = ((c + 1) / 2 * (data.b_max - data.b_min)) + data.b_min
-
-                ax[j, i].scatter(x=data.lons, y=data.lats, c=c)
-                ax[j, i].set_title(label)
-
-        plt.savefig(f"epoch_{epoch}.png")
-        plt.close(fig)
 
     def display_current_results(self, visuals, epoch, save_result):
         """Display current results on visdom; save current results to an HTML file.
