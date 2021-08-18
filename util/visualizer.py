@@ -9,7 +9,6 @@ from subprocess import Popen, PIPE
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-# from PIL import Image
 
 
 if sys.version_info[0] == 2:
@@ -60,10 +59,6 @@ def save_maveric_results(visuals, image_path, dataset, title):
 
     for i, (label, image) in enumerate(visuals.items()):
         for j, sample in enumerate(image):
-            # sample = sample.squeeze(0).cpu().detach().numpy()
-            # im = Image.fromarray(sample)
-            # im = im.resize(data.reshape_size, Image.NEAREST)
-            # c = torch.tensor(np.asarray(im)).view(-1)
             sample = sample.unsqueeze(0).cpu().detach()
             c = torch.nn.functional.interpolate(sample, size=dataset.reshape_size, mode='nearest').view(-1)
             if label.endswith("A"):

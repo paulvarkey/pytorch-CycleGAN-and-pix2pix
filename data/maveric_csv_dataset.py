@@ -17,9 +17,9 @@ import pathlib
 import numpy as np
 import pandas as pd
 import torch
-# from PIL import Image
+from PIL import Image
 
-from data.base_dataset import BaseDataset #, get_transform
+from data.base_dataset import BaseDataset, get_transform
 
 
 class MavericCsvDataset(BaseDataset):
@@ -78,23 +78,17 @@ class MavericCsvDataset(BaseDataset):
             self.image_paths.append(paths)
 
             df_A = pd.read_csv(paths[0])
-            a_max = df_A[opt.column_name].max()
-            a_min = df_A[opt.column_name].min()
-            if a_max > self.a_max:
-                self.a_max = a_max
-            if a_min < self.a_min:
-                self.a_min = a_min
+            col_A = df_A[opt.column_name]
+            self.a_max = max(self.a_max, col_A.max())
+            self.a_min = min(self.a_min, col_A.min())
 
             df_B = pd.read_csv(paths[1])
-            b_max = df_B[opt.column_name].max()
-            b_min = df_B[opt.column_name].min()
-            if b_max > self.b_max:
-                self.b_max = b_max
-            if b_min < self.b_min:
-                self.b_min = b_min
+            col_B = df_B[opt.column_name]
+            self.b_max = max(self.b_max, col_B.max())
+            self.b_min = min(self.b_min, col_B.min())
 
         # define the default transform function. You can use <base_dataset.get_transform>; You can also define your custom transform function
-        # self.transform = get_transform(opt, method=Image.NEAREST, convert=False)
+        self.transform = get_transform(opt, method=Image.NEAREST, convert=False)
 
 
     def __getitem__(self, index):
@@ -116,20 +110,16 @@ class MavericCsvDataset(BaseDataset):
         df_A = pd.read_csv(A_path)
         arr_A = df_A.rsrp.values.reshape(self.reshape_size).astype(np.float32)
         arr_A = 2 * ((arr_A - self.a_min) / (self.a_max - self.a_min)) - 1
-        # im_A = self.transform(Image.fromarray(arr_A))
-        # A = torch.tensor(np.asarray(im_A).astype(np.float32)).unsqueeze(0)
-        tensor_A = torch.tensor(arr_A).unsqueeze(0).unsqueeze(0)
-        A = torch.nn.functional.interpolate(tensor_A, size=(92, 68), mode='nearest')
+        im_A = self.transform(Image.fromarray(arr_A))
+        A = torch.tensor(np.asarray(im_A).astype(np.float32)).unsqueeze(0)
 
         df_B = pd.read_csv(B_path)
         arr_B = df_B.rsrp.values.reshape(self.reshape_size).astype(np.float32)
         arr_B = 2 * ((arr_B - self.b_min) / (self.b_max - self.b_min)) - 1
-        # im_B = self.transform(Image.fromarray(arr_B))
-        # B = torch.tensor(np.asarray(im_B).astype(np.float32)).unsqueeze(0)
-        tensor_B = torch.tensor(arr_B).unsqueeze(0).unsqueeze(0)
-        B = torch.nn.functional.interpolate(tensor_B, size=(92, 68), mode='nearest')
+        im_B = self.transform(Image.fromarray(arr_B))
+        B = torch.tensor(np.asarray(im_B).astype(np.float32)).unsqueeze(0)
 
-        return {'A': A.squeeze(0), 'B': B.squeeze(0), 'A_paths': str(A_path), 'B_paths': str(B_path)}
+        return {'A': A, 'B': B, 'A_paths': str(A_path), 'B_paths': str(B_path)}
 
     def __len__(self):
         """Return the total number of images."""
