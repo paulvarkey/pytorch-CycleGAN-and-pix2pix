@@ -49,13 +49,13 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
 
 def save_maveric_results(visuals, image_path, dataset, title):
     num_labels = len(visuals)
-    num_samples = len(list(visuals.values())[0])
-    fig, ax = plt.subplots(num_samples, num_labels, figsize=(10 * num_labels, 8 * num_samples))
+    batch_size = len(list(visuals.values())[0])
+    fig, ax = plt.subplots(batch_size, num_labels, figsize=(6 * num_labels, 6 * batch_size))
     fig.suptitle(title)
 
     df = pd.read_csv(image_path[0])
-    lons = df.longitude.values
-    lats = df.latitude.values
+    lons = df[dataset.opt.lon_col].values
+    lats = df[dataset.opt.lat_col].values
 
     for i, (label, image) in enumerate(visuals.items()):
         for j, sample in enumerate(image):

@@ -29,12 +29,13 @@ class MavericCsvDataset(BaseDataset):
 
     dataroot/
       {train,test}/
-        A/
-          data.csv
-        B/
-          data.csv
+        sim_XXX/
+          A/
+            data.csv
+          B/
+            data.csv
 
-    data.csv must have columns called 'latitude', 'longitude', and a data
+    data.csv must have columns for latitude, longitude and a data
     column passed in as a command-line argument 'column_name', below
     """
     @staticmethod
@@ -48,7 +49,9 @@ class MavericCsvDataset(BaseDataset):
         Returns:
             the modified parser.
         """
-        parser.add_argument('--column_name', type=str, default="rsrp", help='column name to use for data')
+        parser.add_argument('--column_name', type=str, default='rsrp_dbm', help='column name to use for data')
+        parser.add_argument('--lat_col', type=str, default='rx_loc2', help='column name for latitude data')
+        parser.add_argument('--lon_col', type=str, default='rx_loc1', help='column name for longitude data')
         parser.add_argument('--reshape_size', type=int, nargs=2, help='matrix size to reshape the data vector')
         return parser
 
@@ -108,13 +111,13 @@ class MavericCsvDataset(BaseDataset):
         A_path, B_path = self.image_paths[index]
 
         df_A = pd.read_csv(A_path)
-        arr_A = df_A.rsrp.values.reshape(self.reshape_size).astype(np.float32)
+        arr_A = df_A[self.opt.column_name].values.reshape(self.reshape_size).astype(np.float32)
         arr_A = 2 * ((arr_A - self.a_min) / (self.a_max - self.a_min)) - 1
         im_A = self.transform(Image.fromarray(arr_A))
         A = torch.tensor(np.asarray(im_A).astype(np.float32)).unsqueeze(0)
 
         df_B = pd.read_csv(B_path)
-        arr_B = df_B.rsrp.values.reshape(self.reshape_size).astype(np.float32)
+        arr_B = df_B[self.opt.column_name].values.reshape(self.reshape_size).astype(np.float32)
         arr_B = 2 * ((arr_B - self.b_min) / (self.b_max - self.b_min)) - 1
         im_B = self.transform(Image.fromarray(arr_B))
         B = torch.tensor(np.asarray(im_B).astype(np.float32)).unsqueeze(0)
