@@ -31,11 +31,11 @@ class MavericCsvDataset(BaseDataset):
       {train,test}/
         sim_XXX/
           A/
-            data.csv
+            *.csv
           B/
-            data.csv
+            *.csv
 
-    data.csv must have columns for latitude, longitude and a data
+    The CSV file must have columns for latitude, longitude and a data
     column passed in as a command-line argument 'column_name', below
     """
     @staticmethod
@@ -76,8 +76,9 @@ class MavericCsvDataset(BaseDataset):
         self.b_max = float("-inf")
         self.b_min = float("inf")
 
-        for p in pathlib.Path(f"{opt.dataroot}/{opt.phase}").iterdir():
-            paths = (p / "A" / "data.csv", p / "B" / "data.csv")
+        dataroot = pathlib.Path(opt.dataroot) / opt.phase
+        for p in dataroot.iterdir():
+            paths = tuple(p.glob("**/*.csv"))
             self.image_paths.append(paths)
 
             df_A = pd.read_csv(paths[0])
