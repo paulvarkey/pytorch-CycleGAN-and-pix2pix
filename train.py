@@ -22,7 +22,7 @@ import time
 from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
-from util.visualizer import Visualizer, save_maveric_results
+from util.visualizer import Visualizer
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -56,10 +56,15 @@ if __name__ == '__main__':
                 model.compute_visuals()
                 visuals = model.get_current_visuals()
                 if opt.dataset_mode == 'maveric_csv':
-                    save_maveric_results(visuals, model.get_image_paths(), dataset.dataset, title=f"epoch_{epoch}")
-                else:
-                    save_result = total_iters % opt.update_html_freq == 0
-                    visualizer.display_current_results(visuals, epoch, save_result)
+                    for label, im_tensor in visuals.items():
+                        im_numpy = im_tensor[0].cpu().detach().float().numpy()
+                        if label.endswith("A"):
+                            im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.a_max - dataset.dataset.a_min)) + dataset.dataset.a_min
+                        elif label.endswith("B"):
+                            im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.b_max - dataset.dataset.b_min)) + dataset.dataset.b_min
+                        visuals[label] = im_numpy
+
+                visualizer.display_current_results(visuals, epoch, save_result)
 
             if total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses()

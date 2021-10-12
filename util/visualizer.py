@@ -6,9 +6,7 @@ import torch
 from . import util, html
 from subprocess import Popen, PIPE
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 
 if sys.version_info[0] == 2:
@@ -45,34 +43,6 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
         txts.append(label)
         links.append(image_name)
     webpage.add_images(ims, txts, links, width=width)
-
-
-def save_maveric_results(visuals, image_path, dataset, title):
-    num_labels = len(visuals)
-    batch_size = len(list(visuals.values())[0])
-    fig, ax = plt.subplots(batch_size, num_labels, figsize=(6 * num_labels, 6 * batch_size))
-    fig.suptitle(title)
-
-    df = pd.read_csv(image_path[0])
-    lons = df[dataset.opt.lon_col].values
-    lats = df[dataset.opt.lat_col].values
-
-    for i, (label, image) in enumerate(visuals.items()):
-        for j, sample in enumerate(image):
-            sample = sample.unsqueeze(0).cpu().detach()
-            c = torch.nn.functional.interpolate(sample, size=dataset.reshape_size, mode='nearest').view(-1)
-            if label.endswith("A"):
-                c = ((c + 1) / 2 * (dataset.a_max - dataset.a_min)) + dataset.a_min
-            elif label.endswith("B"):
-                c = ((c + 1) / 2 * (dataset.b_max - dataset.b_min)) + dataset.b_min
-
-            idx = num_labels * j + i
-            pcm = ax.flat[idx].scatter(x=lons, y=lats, c=c.numpy())
-            ax.flat[idx].set_title(label)
-
-    fig.colorbar(pcm, ax=ax, location="right")
-    plt.savefig(f"{title}.jpg")
-    plt.close(fig)
 
 
 class Visualizer():
@@ -189,7 +159,7 @@ class Visualizer():
             self.saved = True
             # save images to the disk
             for label, image in visuals.items():
-                image_numpy = util.tensor2im(image)
+                image_numpy = util.tensor2im(image, imtype=image.dtype)
                 img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
                 util.save_image(image_numpy, img_path)
 

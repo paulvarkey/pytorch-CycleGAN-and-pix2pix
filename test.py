@@ -63,10 +63,15 @@ if __name__ == '__main__':
         model.test()           # run inference
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
-        if i % 5 == 0:  # save images to an HTML file
-            print('processing (%04d)-th image... %s' % (i, img_path))
         if opt.dataset_mode == 'maveric_csv':
-            save_maveric_results(visuals, img_path, dataset.dataset, f"{opt.name}_{opt.phase}_{i}")
-        else:
-            save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
+            for label, im_tensor in visuals.items():
+                im_numpy = im_tensor[0].cpu().detach().float().numpy()
+                if label.endswith("A"):
+                    im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.a_max - dataset.dataset.a_min)) + dataset.dataset.a_min
+                elif label.endswith("B"):
+                    im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.b_max - dataset.dataset.b_min)) + dataset.dataset.b_min
+                visuals[label] = im_numpy
+
+        print('processing (%04d)-th image... %s' % (i, img_path))
+        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)  # save images to an HTML file
     webpage.save()  # save the HTML

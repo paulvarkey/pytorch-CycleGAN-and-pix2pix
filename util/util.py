@@ -1,6 +1,7 @@
 """This module contains simple helper functions """
 from __future__ import print_function
 import torch
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 import os
@@ -54,14 +55,22 @@ def save_image(image_numpy, image_path, aspect_ratio=1.0):
         image_path (str)          -- the path of the image
     """
 
-    image_pil = Image.fromarray(image_numpy)
-    h, w, _ = image_numpy.shape
+    if image_numpy.dtype == np.float32:
+        _, x, y = image_numpy.shape
+        yv, xv = np.meshgrid(np.arange(y), np.arange(x))
+        pcm = plt.scatter(x=xv, y=yv, c=image_numpy)
+        plt.colorbar(pcm)
+        plt.savefig(image_path)
+        plt.clf()
+    else:
+        image_pil = Image.fromarray(image_numpy)
+        h, w, _ = image_numpy.shape
 
-    if aspect_ratio > 1.0:
-        image_pil = image_pil.resize((h, int(w * aspect_ratio)), Image.BICUBIC)
-    if aspect_ratio < 1.0:
-        image_pil = image_pil.resize((int(h / aspect_ratio), w), Image.BICUBIC)
-    image_pil.save(image_path)
+        if aspect_ratio > 1.0:
+            image_pil = image_pil.resize((h, int(w * aspect_ratio)), Image.BICUBIC)
+        if aspect_ratio < 1.0:
+            image_pil = image_pil.resize((int(h / aspect_ratio), w), Image.BICUBIC)
+        image_pil.save(image_path)
 
 
 def print_numpy(x, val=True, shp=False):
