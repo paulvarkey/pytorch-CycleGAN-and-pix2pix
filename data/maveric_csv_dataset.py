@@ -77,7 +77,7 @@ class MavericCsvDataset(BaseDataset):
         self.b_min = float("inf")
 
         dataroot = pathlib.Path(opt.dataroot) / opt.phase
-        for p in dataroot.iterdir():
+        for p in sorted(dataroot.iterdir()):
             paths = tuple(p.glob("**/*.csv"))
             self.image_paths.append(paths)
 

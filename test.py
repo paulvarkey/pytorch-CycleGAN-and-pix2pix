@@ -33,6 +33,9 @@ from models import create_model
 from util.visualizer import save_images
 from util import html
 
+import numpy as np
+import pandas as pd
+
 
 if __name__ == '__main__':
     opt = TestOptions().parse()  # get test options
@@ -70,8 +73,25 @@ if __name__ == '__main__':
                     im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.a_max - dataset.dataset.a_min)) + dataset.dataset.a_min
                 elif label.endswith("B"):
                     im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.b_max - dataset.dataset.b_min)) + dataset.dataset.b_min
+                    if label == "real_B":
+                        real_b = im_numpy
+                    elif label == "fake_B":
+                        fake_b = im_numpy
                 visuals[label] = im_numpy
 
-        print('processing (%04d)-th image... %s' % (i, img_path))
+            _, x, y = fake_b.shape
+            yv, xv = np.meshgrid(np.arange(y), np.arange(x))
+            fake_b_df = pd.DataFrame(
+                {
+                    dataset.dataset.opt.lon_col: xv.reshape(-1),
+                    dataset.dataset.opt.lat_col: yv.reshape(-1),
+                    dataset.dataset.opt.column_name: fake_b.reshape(-1),
+                }
+            )
+            fake_b_df.to_csv(os.path.join(web_dir, os.path.basename(img_path[0])))
+            mae = np.mean(np.abs(real_b - fake_b))
+            print('processing (%04d)-th image... %s / MAE: %.3f' % (i, img_path, mae))
+        else:
+            print('processing (%04d)-th image... %s' % (i, img_path))
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)  # save images to an HTML file
     webpage.save()  # save the HTML
