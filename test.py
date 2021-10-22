@@ -88,7 +88,7 @@ if __name__ == '__main__':
                     dataset.dataset.opt.column_name: fake_b.reshape(-1),
                 }
             )
-            fake_b_df.to_csv(os.path.join(web_dir, os.path.basename(img_path[0])))
+            fake_b_df.to_csv(os.path.join(web_dir, os.path.basename(img_path[0])), index=False)
             mae = np.mean(np.abs(real_b - fake_b))
             print('processing (%04d)-th image... %s / MAE: %.3f' % (i, img_path, mae))
         else:
