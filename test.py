@@ -77,20 +77,28 @@ if __name__ == '__main__':
                         real_b = im_numpy
                     elif label == "fake_B":
                         fake_b = im_numpy
-                visuals[label] = im_numpy
+                visuals[label] = np.where(im_numpy == -500, np.nan, im_numpy)
 
-            _, x, y = fake_b.shape
-            yv, xv = np.meshgrid(np.arange(y), np.arange(x))
-            fake_b_df = pd.DataFrame(
-                {
-                    dataset.dataset.opt.lon_col: xv.reshape(-1),
-                    dataset.dataset.opt.lat_col: yv.reshape(-1),
-                    dataset.dataset.opt.column_name: fake_b.reshape(-1),
-                }
-            )
-            fake_b_df.to_csv(os.path.join(web_dir, os.path.basename(img_path[0])), index=False)
             mae = np.mean(np.abs(real_b - fake_b))
             print('processing (%04d)-th image... %s / MAE: %.3f' % (i, img_path, mae))
+
+            fake_b_filename = os.path.join(web_dir, os.path.basename(img_path[0]))
+            fake_b_colname = dataset.dataset.cols[i % len(dataset.dataset.cols)]
+            try:
+                fake_b_df = pd.read_csv(fake_b_filename)
+                fake_b_df[fake_b_colname] = fake_b.reshape(-1)
+            except FileNotFoundError:
+                _, x, y = fake_b.shape
+                yv, xv = np.meshgrid(np.arange(y), np.arange(x))
+                fake_b_df = pd.DataFrame(
+                    {
+                        "x": xv.reshape(-1),
+                        "y": yv.reshape(-1),
+                        fake_b_colname: fake_b.reshape(-1),
+                    }
+                )
+            fake_b_df["rsrp_dbm"] = fake_b_df.filter(regex=dataset.dataset.opt.col_regex).max(axis=1)
+            fake_b_df.to_csv(fake_b_filename, index=False)
         else:
             print('processing (%04d)-th image... %s' % (i, img_path))
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)  # save images to an HTML file

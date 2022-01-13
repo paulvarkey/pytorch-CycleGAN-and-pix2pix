@@ -24,6 +24,8 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import Visualizer
 
+import numpy as np
+
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -63,6 +65,7 @@ if __name__ == '__main__':
                             im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.a_max - dataset.dataset.a_min)) + dataset.dataset.a_min
                         elif label.endswith("B"):
                             im_numpy = ((im_numpy + 1) / 2 * (dataset.dataset.b_max - dataset.dataset.b_min)) + dataset.dataset.b_min
+                        im_numpy = np.where(im_numpy == -500, np.nan, im_numpy)
                         visuals[label] = im_numpy
 
                 visualizer.display_current_results(visuals, epoch, save_result)
